@@ -31,6 +31,7 @@ export async function api(request, env) {
       headers: {
         "Content-Type": "application/json",
         ETag: obj.httpEtag,
+        "X-Folio-Version": obj.etag,
         "Cache-Control": "no-store",
       },
     });
@@ -79,7 +80,7 @@ export async function api(request, env) {
   }
   const obj = await env.BUCKET.put(key, body, {
     onlyIf: match
-      ? { etagMatches: match.replaceAll('"', "") }
+      ? { etagMatches: match.replace(/^W\//, "").replaceAll('"', "") }
       : { etagDoesNotMatch: "*" },
     httpMetadata: { contentType: "application/json" },
   });

@@ -162,3 +162,24 @@ test("Vault rejects unauthenticated access and stale conditional writes", async 
   assert.equal((await api(req(), env)).status, 204);
   assert.equal((await api(req(), env)).status, 412);
 });
+
+test("Compression proxies can weaken ETags without breaking later syncs", async () => {
+  const env = { BUCKET: bucket() },
+    key = createKey();
+  const fetcher = async (url, init = {}) => {
+    const r = await api(new Request("https://example.test" + url, init), env);
+    if ((init.method || "GET") === "GET" && r.ok) {
+      const headers = new Headers(r.headers);
+      headers.set("etag", "W/" + headers.get("etag"));
+      headers.delete("x-folio-version");
+      return new Response(r.body, { status: r.status, headers });
+    }
+    return r;
+  };
+  const initial = demoLibrary();
+  await syncLibrary(initial, key, fetcher);
+  initial.notes[0] = revise(initial.notes[0], { title: "Edited after upload" });
+  await syncLibrary(initial, key, fetcher);
+  const result = await syncLibrary(demoLibrary(), key, fetcher);
+  assert.equal(result.library.notes[0].title, "Edited after upload");
+});

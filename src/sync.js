@@ -88,7 +88,11 @@ export async function syncLibrary(local, key, fetcher = fetch) {
         "Content-Type": "application/json",
         ...(response.status === 404
           ? { "If-None-Match": "*" }
-          : { "If-Match": response.headers.get("etag") }),
+          : {
+              "If-Match":
+                response.headers.get("x-folio-version") ||
+                response.headers.get("etag"),
+            }),
       },
       body,
     });
